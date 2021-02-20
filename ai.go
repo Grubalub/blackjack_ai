@@ -58,7 +58,7 @@ func (ai humanAI) Play(hand []deck.Card, dealer deck.Card) Move {
 	}
 }
 
-func (ai humanAI) Results(hand [][]deck.Card, dealer []deck.Card) {
+func (ai humanAI) Results(hand [][]deck.Card, dealer[]deck.Card) {
 	fmt.Println("==FINAL HANDS==")
 	fmt.Println("Players:", hand)
 	fmt.Println("Dealer:", dealer)
