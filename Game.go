@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	statePlayerTurn State = iota
+	statePlayerTurn state = iota
 	stateDealerTurn
 	stateHandOver
 )
@@ -25,53 +25,51 @@ type Game struct {
 	// unexported fields
 	deck     []deck.Card
 	state    state
-	Player   []deck.Card
-	Dealer   []deck.Card
+	player   []deck.Card
+	dealer   []deck.Card
 	dealerAI AI
 	balance  int
 }
 
 func (g *Game) currentHand() *[]deck.Card {
-	switch g.State {
-	case StatePlayerTurn:
+	switch g.state {
+	case statePlayerTurn:
 		return &g.player
-	case StateDealerTurn:
+	case stateDealerTurn:
 		return &g.dealer
 	default:
-		panic("it isn't currently any players turn")
+		panic("it isn't currently any player's turn")
 	}
 }
 
-func deal(gs Game) {
+func deal(g *Game) {
 	g.player = make([]deck.Card, 0, 5)
 	g.dealer = make([]deck.Card, 0, 5)
 	var card deck.Card
 	for i := 0; i < 2; i++ {
 		card, g.deck = draw(g.deck)
 		g.player = append(g.player, card)
-		card, g.Deck = draw(g.deck)
+		card, g.deck = draw(g.deck)
 		g.dealer = append(g.dealer, card)
-
 	}
-	g.State = statePlayerTurn
-
+	g.state = statePlayerTurn
 }
 
 func (g *Game) Play(ai AI) int {
-	gs.deck = deck.New(deck.Deck(3), deck.Shuffle)
+	g.deck = deck.New(deck.Deck(3), deck.Shuffle)
 
 	for i := 0; i < 2; i++ {
 		deal(g)
 
 		for g.state == statePlayerTurn {
-			han := make([]deck.Card, len(g.Player))
+			hand := make([]deck.Card, len(g.player))
 			copy(hand, g.player)
-			move := ai.Play(g.player, g.dealer[0])
+			move := ai.Play(hand, g.dealer[0])
 			move(g)
 		}
 
-		for g.state == StateDealerTurn {
-			hand := make([]deck.Card, len(g.player))
+		for g.state == stateDealerTurn {
+			hand := make([]deck.Card, len(g.dealer))
 			copy(hand, g.dealer)
 			move := g.dealerAI.Play(hand, g.dealer[0])
 			move(g)
@@ -79,7 +77,7 @@ func (g *Game) Play(ai AI) int {
 
 		endHand(g, ai)
 	}
-	return 0
+	return g.balance
 }
 
 type Move func(*Game)
@@ -92,10 +90,9 @@ func MoveHit(g *Game) {
 	if Score(*hand...) > 21 {
 		MoveStand(g)
 	}
-	return ret
 }
 
-func MoveStand(gs *Game) {
+func MoveStand(g *Game) {
 	g.state++
 }
 
@@ -104,33 +101,32 @@ func draw(cards []deck.Card) (deck.Card, []deck.Card) {
 }
 
 func endHand(g *Game, ai AI) {
-
 	pScore, dScore := Score(g.player...), Score(g.dealer...)
-	//todo : figure out winnings
+	// TODO(joncalhoun): Figure out winnings and add/subtract them
 	switch {
 	case pScore > 21:
-		fmt.Println("You bust fool!")
+		fmt.Println("You busted")
 		g.balance--
 	case dScore > 21:
-		fmt.Println("The deala bust fool!")
+		fmt.Println("Dealer busted")
 		g.balance++
 	case pScore > dScore:
-		fmt.Println("You won sucka!")
+		fmt.Println("You win!")
 		g.balance++
-	case pScore < dScore:
-		fmt.Println("You lost sucka!")
+	case dScore > pScore:
+		fmt.Println("You lose")
 		g.balance--
-	case pScore == dScore:
-		fmt.Println("It's a draw fool")
+	case dScore == pScore:
+		fmt.Println("Draw")
 	}
 	fmt.Println()
 	ai.Results([][]deck.Card{g.player}, g.dealer)
 	g.player = nil
 	g.dealer = nil
-
 }
 
-//score will take in a hand and return the best possible blackjack hand
+// Score will take in a hand of cards and return the best blackjack score
+// possible with the hand.
 func Score(hand ...deck.Card) int {
 	minScore := minScore(hand...)
 	if minScore > 11 {
@@ -138,14 +134,16 @@ func Score(hand ...deck.Card) int {
 	}
 	for _, c := range hand {
 		if c.Rank == deck.Ace {
-			// ace is currently worth 1, we are changing it to be worth 11
+			// ace is currently worth 1, and we are changing it to be worth 11
+			// 11 - 1 = 10
 			return minScore + 10
 		}
 	}
 	return minScore
 }
 
-// soft returns true if the score of a ahand is a soft score
+// Soft returns true if the score of a hand is a soft score - that is if an ace
+// is being counted as 11 points.
 func Soft(hand ...deck.Card) bool {
 	minScore := minScore(hand...)
 	score := Score(hand...)
